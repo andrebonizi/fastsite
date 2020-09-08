@@ -1,0 +1,88 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+
+</head>
+<style>
+    .nav-link{
+        cursor: pointer;
+    }
+</style>
+<body>
+    <div class="row">
+        <div class="col-12 col-lg-2 container bg-dark text-light">
+            Menu
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a id="btnHome" class="nav-link active menuBtn">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a id="btnAbout" class="nav-link active menuBtn">About</a>
+                </li>
+                <li class="nav-item">
+                    <a id="btnServices" class="nav-link active menuBtn">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a id="btnBlog" class="nav-link active menuBtn">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a id="btnContact" class="nav-link active menuBtn">Contact</a>
+                </li>
+            </ul>
+        </div>
+        <div class="col-12 col-lg-10">
+            
+            <div id="content">
+                This is the admin page!
+            </div>
+            <br>
+            <div id="siteid" hidden>{{id}}</div>
+            <br>
+        </div>
+    </div>
+</body>
+<footer>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            //alert('epa')
+            function loading(){
+                $('#content').html('<i class="fa fa-cog fa-spin"></i>')
+            }
+            var siteId = parseInt($("#siteid").html())
+            //console.log(siteId)
+            $(".menuBtn").on('click', function(){
+                loading()
+                var btnId = $(this).attr('id').substr(3).toLocaleLowerCase()
+                console.log(btnId)
+                $.get("site/"+siteId+"/"+btnId, function( data, status ){
+                    console.log(status)
+                    console.log(data)
+                    switch(status){
+                        case 'success': 
+                            if(data[0] != undefined){
+                                $("#content").html(data[0].content); 
+                            }else{
+                                $("#content").html('Content not found....')
+                            }
+                            
+                            
+                            break;
+                        
+                        default: $("#content").html('Undefined error....');
+                    }
+                    
+                }).fail(function(){
+                    $("#content").html('Route not found....')
+                })
+
+            })
+        })
+    </script>
+    
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</footer>
+</html>

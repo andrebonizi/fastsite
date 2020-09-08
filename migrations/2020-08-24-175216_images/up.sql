@@ -4,5 +4,4 @@ CREATE TABLE images (
     site_id INT NOT NULL DEFAULT 0,
     ref_name VARCHAR NOT NULL,
     ref_path VARCHAR NULL
-    
 );

@@ -10,6 +10,8 @@ extern crate rocket;
 
 extern crate dotenv;
 
+extern crate chrono;
+
 /* Importing functions */
 use diesel::pg::PgConnection;
 use diesel::Connection;
@@ -52,6 +54,15 @@ fn main() {
     rocket::ignite().mount("/", routes![
         assets,
         page::index,
-        page::texts
+        page::texts,
+        page::admin,
+        page::all_sites,
+        page::site_by_id,
+        page::all_users,
+        page::users_by_site,
+        page::login,
+        page::get_about,
+        page::get_services,
+        page::get_blog
         ]).attach(Template::fairing()).launch();
 }
