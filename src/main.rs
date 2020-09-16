@@ -62,7 +62,14 @@ fn main() {
         page::users_by_site,
         page::login,
         page::get_about,
+        page::get_contact,
+        //BLOG
+        page::get_blog,
+        page::new_post,
+        page::delete_post,
+        page::update_post,
+        //SERVICE
         page::get_services,
-        page::get_blog
+        page::new_service
         ]).attach(Template::fairing()).launch();
 }

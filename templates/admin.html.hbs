@@ -47,33 +47,227 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
         $(document).ready(function(){
-            //alert('epa')
+            function newPost(){
+                var siteId = $('#siteid').text()
+                var form = $('#newPost')[0]
+                var fd = new FormData()
+                fd.append('post', form[0].value)
+                fd.append('image', form[1].files[0])
+                $.ajax({
+                    type: "POST",
+                    enctype: 'multipart/form-data',
+                    contentType: false,
+                    processData: false,
+                    url: "/site/"+siteId+"/newpost",
+                    data: fd,
+                    success: function(data){
+                        alert('Posted!')
+                        loading()
+                        $.get("site/"+siteId+"/blog", function( data, status ){
+                            switch(status){
+                                case 'success': setContent(data, 'blog', siteId); break;
+                                default: $("#content").html('Undefined error....');
+                            }
+                        }).fail(function(){
+                            $("#content").html('Route not found....')
+                        })
+                    },
+                    error: function(e){
+                        console.log('error: '+e)
+                    }
+                })
+            }
+            function updatePost(){
+                var postId = parseInt($(this).attr('id'))
+                var siteId = $('#siteid').text()
+                var formId  = '#updatePost'+postId
+                var form = $(formId)[0]
+                var fd = new FormData()
+                fd.append('post', form[1].value)
+                if(form[0].files[0] != undefined){
+                    fd.append('image', form[0].files[0])
+                }
+                $.ajax({
+                    type: "POST",
+                    enctype: 'multipart/form-data',
+                    contentType: false,
+                    processData: false,
+                    url: "/site/"+siteId+"/blog/update/"+postId,
+                    data: fd,
+                    success: function(data){
+                        alert('Updated!')
+                        loading()
+                        $.get("site/"+siteId+"/blog", function( data, status ){
+                            switch(status){
+                                case 'success': setContent(data, 'blog', siteId); break;
+                                default: $("#content").html('Undefined error....');
+                            }
+                        }).fail(function(){
+                            $("#content").html('Route not found....')
+                        })
+                    },
+                    error: function(e){
+                        console.log('error: '+e)
+                    }
+                })
+            }
+            function deletePost(){
+                var postId = parseInt($(this).attr('id'))
+                var siteId = $('#siteid').text()
+                $.get("/site/"+siteId+"/blog/delete/"+postId, function( data, status ){
+                    alert('Post deleted!')
+                    loading()
+                    $.get("site/"+siteId+"/blog", function( data, status ){
+                        switch(status){
+                            case 'success': setContent(data, 'blog', siteId); break;
+                            default: $("#content").html('Undefined error....');
+                        }
+                    }).fail(function(){
+                        $("#content").html('Route not found....')
+                    })
+                }).fail(function(){
+                    alert('Post was not deleted....')
+                })
+            }
+            
+            //Services
+            function newService(){
+                var siteId = $('#siteid').text()
+                var form = $('#newService')[0]
+                var fd = new FormData()
+                fd.append('content', form[0].value)
+                console.log(form[0].value)
+                $.ajax({
+                    type: "POST",
+                    enctype: 'multipart/form-data',
+                    contentType: false,
+                    processData: false,
+                    url: "/site/"+siteId+"/newservice",
+                    data: fd,
+                    success: function(data){
+                        alert('Service saved!')
+                        loading()
+                        $.get("site/"+siteId+"/services", function( data, status ){
+                            switch(status){
+                                case 'success': setContent(data, 'services', siteId); break;
+                                default: $("#content").html('Undefined error....');
+                            }
+                        }).fail(function(){
+                            $("#content").html('Route not found....')
+                        })
+                    },
+                    error: function(e){
+                        console.log('error: '+e)
+                    }
+                })
+            }
             function loading(){
                 $('#content').html('<i class="fa fa-cog fa-spin"></i>')
             }
+            
+            //Render content in admin panel
+            function setContent(data, session, id){
+                $('#content').html('')
+                //console.log(data)
+                if(data.length > 0){
+                    switch(session){
+                        case 'blog':
+                            //New Post Form Content
+                            var newPostForm = $('<form id="newPost" class="form-group"></form>')
+                            newPostForm.append('<textarea  class="form-control" name="post" placeholder="Write your post here!" />')
+                            newPostForm.append('<br>')
+                            newPostForm.append('<input  class="form-control" name="image" type="file">')
+                            newPostForm.append('<br>')
+                            var postBtn = $('<div class="btn btn-sm btn-success">Post!</div>')
+                            newPostForm.append(postBtn)
+                            $("#content").append(newPostForm)
+                            postBtn.click(newPost)
+                            $("#content").append('<hr>')
+                            //Latest posts
+                            for(let i=data.length-1; i>=0 ; i--){
+                                var postContent = $('<form id="updatePost'+data[i].id+'" class="form-group" ><p>'+data[i].posted_at+'</p><img src="imgs/' + data[i].img_path + '"><br><input  name="image" type="file" value="imgs/' + data[i].img_path + '"><br><textarea style="width:100%;" name="post">'+data[i].post+'</textarea></form>')
+                                $("#content").append(postContent);
+                                var updateBtn = $('<div id="'+data[i].id+'" class="btn btn-sm btn-info">Update</div>')
+                                $("#content").append(updateBtn)
+                                updateBtn.click(updatePost)
+                                var deleteBtn = $('<div id="'+data[i].id+'" class="btn btn-sm btn-danger">Delete</div>')
+                                $("#content").append(deleteBtn);
+                                deleteBtn.click(deletePost)
+                                $("#content").append('<hr>')
+                            }
+                        break;
+                        case 'services':
+                            //New Service Form Content
+                            var newServiceForm = $('<form id="newService" class="form-group"></form>')
+                            newServiceForm.append('<textarea  class="form-control" name="content" placeholder="Write your service content here!" />')
+                            newServiceForm.append('<br>')
+                            var saveBtn = $('<div class="btn btn-sm btn-success">Register!</div>')
+                            newServiceForm.append(saveBtn)
+                            $("#content").append(newServiceForm)
+                            saveBtn.click(newService)
+                            $("#content").append('<hr>')
+                            for(let i=0; i< data.length; i++){
+                                var service = $('<div><textarea>'+data[i].content+'</textarea></div><hr>')
+                                $("#content").append(service)
+                            }
+                        break;
+                        case 'contact': 
+                            for(let i=0; i< data.length; i++){
+                                var contact = $('<div><p>'+data[i].name+'</p><p>'+data[i].email+'</p><p>'+data[i].message+'</p></div><hr>')
+                                $("#content").append(contact);
+                            }
+                            break;
+                        default:
+                            for(let i=0; i< data.length; i++){
+                                var content = $('<p>'+data[i].content+'</p>')
+                                $("#content").append(content);
+                            }
+                    }
+                }else{
+                    var content = '';
+                    switch(session){
+                        case 'blog':
+                            content += 'New Post!'
+                            content += '<form enctype="multipart/form-data" method="POST" action="/site/'+id+'/newpost">'
+                            content += '<textarea name="post" placeholder="Write your post here!"></textarea><br>'
+                            content += '<input name="image" type="file"><br>'
+                            content += '<input type="submit" value="Post!">'
+                            content += '</form><hr>'
+                            $("#content").html(content);
+                        break;
+                        case 'services':
+                             var newServiceForm = $('<form id="newService" class="form-group"></form>')
+                            newServiceForm.append('<textarea  class="form-control" name="content" placeholder="Write your service content here!" />')
+                            newServiceForm.append('<br>')
+                            var saveBtn = $('<div class="btn btn-sm btn-success">Register!</div>')
+                            newServiceForm.append(saveBtn)
+                            saveBtn.click(newService)
+                            $("#content").append(newServiceForm)
+                            
+                        break;
+                        default:
+                            content += 'Content not found....'
+                            $("#content").html(content);
+                    }
+                    
+                }
+            }
+
+            //Choose site content to load
             var siteId = parseInt($("#siteid").html())
-            //console.log(siteId)
             $(".menuBtn").on('click', function(){
                 loading()
                 var btnId = $(this).attr('id').substr(3).toLocaleLowerCase()
-                console.log(btnId)
+                //console.log(btnId)
                 $.get("site/"+siteId+"/"+btnId, function( data, status ){
-                    console.log(status)
-                    console.log(data)
+                    //console.log(status)
+                    //console.log(data)
                     switch(status){
                         case 'success': 
-                            if(data[0] != undefined){
-                                $("#content").html(data[0].content); 
-                            }else{
-                                $("#content").html('Content not found....')
-                            }
-                            
-                            
+                            setContent(data, btnId, siteId)
                             break;
-                        
                         default: $("#content").html('Undefined error....');
                     }
-                    
                 }).fail(function(){
                     $("#content").html('Route not found....')
                 })

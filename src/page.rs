@@ -11,6 +11,8 @@ use crate::schema::*;
 /* Database data structs (Hero, NewHero) */
 use crate::models::*;
 
+use chrono::Utc;
+
 /* To be able to parse raw forms */
 use rocket::http::ContentType;
 use rocket::Data;
@@ -20,7 +22,7 @@ use rocket_multipart_form_data::{
 
 /* Flash message and redirect */
 use rocket::request::FlashMessage;
-//use rocket::response::{Flash, Redirect};
+use rocket::response::{Flash, Redirect};
 
 
 
@@ -77,7 +79,6 @@ pub fn all_users() -> Json<Vec<User>>{
         .select(users::all_columns)
         .load::<User>(&crate::establish_connection())
         .expect("Whoops, like this went bananas!");
-    
     Json(users)
 }
 
@@ -106,6 +107,20 @@ pub fn get_about(id: i32) -> Json<Vec<About>>{
     
     Json(about)
 }
+
+#[get("/site/<id>/contact")]
+pub fn get_contact(id: i32) -> Json<Vec<Contact>>{
+
+    /* Get all our texts from database */
+    let contacts: Vec<Contact> = contact::table
+        .select(contact::all_columns)
+        .filter(contact::site_id.eq(id))
+        .load::<Contact>(&crate::establish_connection())
+        .expect("Whoops, like this went bananas!");
+    
+    Json(contacts)
+}
+//SERVICES
 #[get("/site/<id>/services")]
 pub fn get_services(id: i32) -> Json<Vec<Service>>{
 
@@ -118,17 +133,137 @@ pub fn get_services(id: i32) -> Json<Vec<Service>>{
     
     Json(services)
 }
+#[post("/site/<id>/newservice", data = "<service_data>")]
+pub fn new_service(id: i32, content_type: &ContentType, service_data: Data){
+    let mut context = HashMap::new();
+    context.insert("id", id);
+    let mut options = MultipartFormDataOptions::new();
+    options.allowed_fields = vec![
+        MultipartFormDataField::text("content"),
+    ];
+    let multipart_form_data = MultipartFormData::parse(content_type, service_data, options);
+    match multipart_form_data {
+        Ok(form) => {
+            let insert = diesel::insert_into(service::table)
+                .values( NewService{
+                    site_id: id,
+                    content: match form.texts.get("content") { Some(val) => &val[0].text, None => "...", },
+                    
+                })
+                .execute(&crate::establish_connection());
+            match insert {
+                Ok(_) => { println!("Service saved!"); },
+                Err(err_msg) =>{ println!("Error saving service... {}", err_msg); }
+            }
+        }
+        Err(err) => { print!("Error on insertion... {}", err); }
+    }
+}
+
+//BLOG
 #[get("/site/<id>/blog")]
 pub fn get_blog(id: i32) -> Json<Vec<Blog>>{
-
     /* Get all our texts from database */
     let blog: Vec<Blog> = blog::table
         .select(blog::all_columns)
         .filter(blog::site_id.eq(id))
         .load::<Blog>(&crate::establish_connection())
         .expect("Whoops, like this went bananas!");
-    
     Json(blog)
+}
+
+#[post("/site/<id>/newpost", data = "<post_data>")]
+pub fn new_post(id: i32,content_type: &ContentType, post_data: Data){
+    let mut context = HashMap::new();
+    context.insert("id", id);
+    use std::fs;
+    let mut options = MultipartFormDataOptions::new();
+    options.allowed_fields = vec![
+        MultipartFormDataField::file("image"),
+        MultipartFormDataField::text("post"),
+    ];
+    let multipart_form_data = MultipartFormData::parse(content_type, post_data, options);
+    match multipart_form_data {
+        Ok(form) => {
+            let image = match form.files.get("image") {
+                Some(file) => {
+                    let file_field = &file[0];
+                    let _content_type = &file_field.content_type;
+                    let _file_name = &file_field.file_name;
+                    let _path = &file_field.path;
+                    let format: Vec<&str> = _file_name.as_ref().unwrap().split('.').collect();
+                    let absolute_path: String = format!("imgs/{}", _file_name.clone().unwrap());
+                    fs::copy(_path, &absolute_path).unwrap();
+                    Some(format!("{}", _file_name.clone().unwrap()))
+                } None => None,
+            };
+            let insert = diesel::insert_into(blog::table)
+                .values( NewBlog{
+                    post: match form.texts.get("post") { Some(val) => &val[0].text, None => "...", },
+                    site_id: id,
+                    img_path: image,
+                    posted_at: Utc::now().naive_utc(),
+                })
+                .execute(&crate::establish_connection());
+            match insert {
+                Ok(_) => { println!("Posted!"); },
+                Err(err_msg) =>{ println!("Error posting... {}", err_msg); }
+            }
+        }
+        Err(err) => { print!("Error on insertion... {}", err); }
+    }
+}
+
+#[post("/site/<id>/blog/update/<postid>", data = "<post_data>")]
+pub fn update_post(id: i32,content_type: &ContentType, post_data: Data, postid: i32){
+    use std::fs;
+    let mut options = MultipartFormDataOptions::new();
+    options.allowed_fields = vec![
+        MultipartFormDataField::file("image"),
+        MultipartFormDataField::text("post"),
+    ];
+    let multipart_form_data = MultipartFormData::parse(content_type, post_data, options);
+    match multipart_form_data {
+        Ok(form) => {
+            let image = match form.files.get("image") {
+                Some(file) => {
+                    let file_field = &file[0];
+                    let _content_type = &file_field.content_type;
+                    let _file_name = &file_field.file_name;
+                    let _path = &file_field.path;
+                    let format: Vec<&str> = _file_name.as_ref().unwrap().split('.').collect();
+                    let absolute_path: String = format!("imgs/{}", _file_name.clone().unwrap());
+                    fs::copy(_path, &absolute_path).unwrap();
+                    Some(format!("{}", _file_name.clone().unwrap()))
+                } None => None,
+            };
+            let update = diesel::update(
+                blog::table
+                    .filter(blog::site_id.eq(id))
+                    .filter(blog::id.eq(postid))
+            ).set( NewBlog{
+                post: match form.texts.get("post") { Some(val) => &val[0].text, None => "...", },
+                site_id: id,
+                img_path: image,
+                posted_at: Utc::now().naive_utc(),
+            })
+            .execute(&crate::establish_connection());
+            match update {
+                Ok(_) => { println!("Updated!"); },
+                Err(err_msg) =>{ println!("Error posting... {}", err_msg); }
+            }
+        } Err(err) => { print!("Error on updating... {}", err); }
+    }
+}
+
+#[get("/site/<id>/blog/delete/<postid>")]
+pub fn delete_post(id: i32, postid: i32) -> Redirect {
+    diesel::delete(blog::table
+        .filter(blog::site_id.eq(id))
+        .filter(blog::id.eq(postid)))
+        .execute(&crate::establish_connection())
+        .expect("Post couldn't be deleted...");
+    Redirect::to("/admin")
 }
 
 #[get("/texts")]
@@ -183,7 +318,7 @@ pub fn login(content_type: &ContentType, form_data: Data) -> Template {
                 //context.insert("text", "User not found...");
                 return Template::render("index", &context)
             }else{
-                println!("{} : {}", email, pass);
+                //println!("{} : {}", email, pass);
                 let id = users[0].site_id;
                 
                 //let id = 1;
@@ -199,7 +334,7 @@ pub fn login(content_type: &ContentType, form_data: Data) -> Template {
 
             }
         }
-        Err(err_msg) => {
+        Err(_err_msg) => {
             //context.insert("text", "Error on login...");
             return Template::render("index", &context)
         }

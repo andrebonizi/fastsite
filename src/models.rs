@@ -39,7 +39,7 @@ pub struct User {
     pub pass: String
 }
 
-#[derive(Debug, Insertable, Serialize)]
+#[derive(Debug, Insertable, AsChangeset)]
 #[ table_name = "users"]
 pub struct NewUser {
     pub site_id: i32, 
@@ -62,12 +62,26 @@ pub struct Service {
     pub site_id: i32, 
     pub content: Option<String>
 }
+#[derive(Debug, Insertable, AsChangeset)]
+#[ table_name = "service"]
+pub struct NewService<'x> {
+    pub site_id: i32, 
+    pub content: &'x str
+}
 
 #[derive(Debug, Queryable, Serialize)]
 pub struct Blog {
     pub id: i32, 
     pub site_id: i32, 
     pub post: Option<String>,
+    pub img_path: Option<String>,
+    pub posted_at: NaiveDateTime
+}
+#[derive(Debug, Insertable, AsChangeset)]
+#[ table_name = "blog"]
+pub struct NewBlog<'x> {
+    pub site_id: i32, 
+    pub post: &'x str,
     pub img_path: Option<String>,
     pub posted_at: NaiveDateTime
 }
